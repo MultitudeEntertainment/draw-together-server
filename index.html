@@ -38,29 +38,7 @@
     }
     #tools button { padding: 4px 8px; }
 
-    /* LISTE D'AMIS À DROITE */
-    #friends-panel {
-      position: absolute; top: 10px; right: 10px;
-      width: 200px;
-      background: rgba(255,255,255,0.95);
-      padding: 10px; border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 10; font-size: 14px;
-    }
-
-    #friends-list {
-      max-height: 300px; overflow-y: auto;
-      margin-top: 6px; border: 1px solid #ddd;
-      border-radius: 6px; padding: 4px; background: #f9fafb;
-    }
-
-    .friend-item {
-      padding: 4px; border-radius: 4px; cursor: pointer;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .friend-item:hover { background: #e5e7eb; }
-
-    /* CHAT DU SALON */
+    /* CHAT SALON */
     #chat-toggle {
       position: absolute; bottom: 20px; right: 20px;
       background: #111827; color: white;
@@ -85,25 +63,6 @@
     #chat-input-area { display: flex; border-top: 1px solid #ccc; }
     #chat-input { flex: 1; padding: 6px; border: none; outline: none; font-size: 13px; }
     #chat-send { padding: 6px 10px; background: #111827; color: white; border: none; cursor: pointer; font-size: 13px; }
-
-    /* DM PRIVÉS */
-    .dm-window {
-      position: absolute; bottom: 80px; right: 300px;
-      width: 260px; height: 300px;
-      background: white; border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      display: none; flex-direction: column; overflow: hidden; z-index: 10;
-    }
-
-    .dm-header {
-      background: #1f2937; color: white;
-      padding: 8px; text-align: center; font-weight: bold; font-size: 14px;
-    }
-
-    .dm-messages { flex: 1; padding: 8px; overflow-y: auto; font-size: 13px; }
-    .dm-input-area { display: flex; border-top: 1px solid #ccc; }
-    .dm-input { flex: 1; padding: 6px; border: none; outline: none; font-size: 13px; }
-    .dm-send { padding: 6px 10px; background: #1f2937; color: white; border: none; cursor: pointer; font-size: 13px; }
 
     /* NOTIFS */
     #notif {
@@ -168,18 +127,6 @@
   </div>
 </div>
 
-<!-- PANEL AMIS -->
-<div id="friends-panel">
-  <h3>Amis</h3>
-
-  <label>Ajouter un ami :
-    <input id="add-friend-input" type="text" placeholder="Pseudo" />
-  </label>
-  <button id="add-friend-btn">Ajouter</button>
-
-  <div id="friends-list"></div>
-</div>
-
 <!-- CHAT SALON -->
 <div id="chat-toggle">💬</div>
 
@@ -202,9 +149,7 @@
 </div>
 
 <script>
-/* ============================================================
-   CANVAS + DESSIN
-============================================================ */
+/* ================== CANVAS + DESSIN ================== */
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 function resize() {
@@ -228,12 +173,7 @@ let currentRoom = null;
 let currentOwner = null;
 let currentPublic = true;
 
-let friends = [];
-let dmWindows = {}; // { pseudo: DOMElement }
-
-/* ============================================================
-   NOTIFS + POPUP
-============================================================ */
+/* ================== NOTIFS + POPUP ================== */
 const notif = document.getElementById("notif");
 function showNotif(text, ms = 2500) {
   notif.textContent = text;
@@ -256,9 +196,7 @@ function showPopup(text, buttons) {
   popup.style.display = "block";
 }
 
-/* ============================================================
-   WEBSOCKET
-============================================================ */
+/* ================== WEBSOCKET ================== */
 const ws = new WebSocket("wss://draw-together-server--johnreckels.replit.app");
 
 ws.onopen = () => {
@@ -365,47 +303,13 @@ ws.onmessage = (event) => {
     drawLine(msg.x1, msg.y1, msg.x2, msg.y2, msg.color, msg.size);
   }
 
-  /* AMIS */
-  if (msg.type === "friendRequest") {
-    showPopup(`${msg.from} veut être ton ami`, [
-      {
-        label: "Accepter",
-        onClick: () => {
-          ws.send(JSON.stringify({ type: "friendResponse", from: msg.from, accept: true }));
-        }
-      },
-      {
-        label: "Refuser",
-        onClick: () => {
-          ws.send(JSON.stringify({ type: "friendResponse", from: msg.from, accept: false }));
-        }
-      }
-    ]);
-  }
-
-  if (msg.type === "friendAdded") {
-    if (!friends.includes(msg.friend)) {
-      friends.push(msg.friend);
-      updateFriendsList();
-      showNotif(`${msg.friend} est maintenant ton ami`);
-    }
-  }
-
-  /* DM PRIVÉS */
-  if (msg.type === "privateChat") {
-    openDM(msg.from);
-    addDMMessage(msg.from, msg.from, msg.message);
-  }
-
   /* ERREURS */
   if (msg.type === "error") {
     showNotif(msg.message || "Erreur");
   }
 };
 
-/* ============================================================
-   INVITE LINK
-============================================================ */
+/* ================== INVITE LINK ================== */
 function updateInviteLink() {
   const span = document.getElementById("invite-link");
   if (!currentRoom) {
@@ -416,9 +320,7 @@ function updateInviteLink() {
   span.textContent = url;
 }
 
-/* ============================================================
-   DESSIN
-============================================================ */
+/* ================== DESSIN ================== */
 function drawLine(x1, y1, x2, y2, c, s) {
   ctx.strokeStyle = c;
   ctx.lineWidth = s;
@@ -439,4 +341,119 @@ canvas.addEventListener("mousedown", (e) => {
     return;
   }
   drawing = true;
-  const w = { x
+  const w = { x: e.clientX - camX, y: e.clientY - camY };
+  lastX = w.x;
+  lastY = w.y;
+});
+
+canvas.addEventListener("mousemove", (e) => {
+  if (panning) {
+    camX = camStartX + (e.clientX - panStartX);
+    camY = camStartY + (e.clientY - panStartY);
+    return;
+  }
+  if (!drawing) return;
+  const w = { x: e.clientX - camX, y: e.clientY - camY };
+
+  const drawColor = (brushMode === "eraser") ? "#ffffff" : color;
+  drawLine(lastX, lastY, w.x, w.y, drawColor, size);
+
+  if (ws.readyState === WebSocket.OPEN && currentRoom) {
+    ws.send(JSON.stringify({
+      type: "draw",
+      x1: lastX, y1: lastY,
+      x2: w.x, y2: w.y,
+      color: drawColor,
+      size
+    }));
+  }
+
+  lastX = w.x;
+  lastY = w.y;
+});
+
+canvas.addEventListener("mouseup", () => { drawing = false; panning = false; });
+canvas.addEventListener("mouseleave", () => { drawing = false; panning = false; });
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+/* ================== UI ================== */
+document.getElementById("color").addEventListener("input", (e) => { color = e.target.value; });
+document.getElementById("size").addEventListener("input", (e) => { size = parseInt(e.target.value, 10); });
+document.getElementById("pseudo").addEventListener("input", (e) => {
+  pseudo = e.target.value.trim() || "Guest";
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "setPseudo", pseudo }));
+  }
+});
+
+document.getElementById("brush-btn").addEventListener("click", () => {
+  brushMode = "brush";
+  showNotif("Pinceau");
+});
+document.getElementById("eraser-btn").addEventListener("click", () => {
+  brushMode = "eraser";
+  showNotif("Gomme (pinceau blanc)");
+});
+
+document.getElementById("create-room").addEventListener("click", () => {
+  const room = document.getElementById("room-name").value.trim();
+  const isPublic = document.getElementById("room-public").checked;
+  if (!room) {
+    showNotif("Choisis un nom de salon.");
+    return;
+  }
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "createRoom", room, public: isPublic }));
+  }
+});
+
+document.getElementById("refresh-rooms").addEventListener("click", () => {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "listRooms" }));
+  }
+});
+
+document.getElementById("invite-btn").addEventListener("click", () => {
+  const target = document.getElementById("invite-pseudo").value.trim();
+  if (!currentRoom) {
+    showNotif("Tu dois être dans un salon.");
+    return;
+  }
+  if (!target) {
+    showNotif("Entre un pseudo à inviter.");
+    return;
+  }
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "invite", room: currentRoom, target }));
+    showNotif(`Invitation envoyée à ${target}`);
+  }
+});
+
+/* ================== CHAT SALON ================== */
+document.getElementById("chat-toggle").addEventListener("click", () => {
+  const win = document.getElementById("chat-window");
+  win.style.display = (win.style.display === "none" || win.style.display === "") ? "flex" : "none";
+});
+
+function sendChat() {
+  const input = document.getElementById("chat-input");
+  const text = input.value.trim();
+  if (!text) return;
+  if (!currentRoom) {
+    showNotif("Rejoins un salon pour chatter.");
+    return;
+  }
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "chat", message: text }));
+  }
+  input.value = "";
+}
+
+document.getElementById("chat-send").addEventListener("click", sendChat);
+document.getElementById("chat-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendChat();
+});
+</script>
+
+</body>
+</html>
