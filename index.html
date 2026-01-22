@@ -21,7 +21,6 @@
         align-items: center;
     }
 
-    /* ACCUEIL carré */
     #home {
         width: 350px;
         height: 350px;
@@ -51,7 +50,6 @@
     .medium { background: #f59e0b; }
     .hard { background: #ef4444; }
 
-    /* QUIZ */
     #quiz {
         width: 100%;
         height: 100%;
@@ -79,7 +77,6 @@
         width: 100%;
     }
 
-    /* RESULTAT */
     #result {
         display: none;
         flex-direction: column;
@@ -101,7 +98,6 @@
 </head>
 <body>
 
-<!-- ACCUEIL -->
 <div id="home">
     <h2>🌍 Quiz des Capitales</h2>
     <p>Clique le pays correspondant à la capitale</p>
@@ -111,7 +107,6 @@
     <button class="btn hard" onclick="startGame('hard')">Difficile</button>
 </div>
 
-<!-- QUIZ -->
 <div id="quiz">
     <div id="question-box">
         <div id="meta">
@@ -124,7 +119,6 @@
     <div id="map"></div>
 </div>
 
-<!-- RESULTAT -->
 <div id="result">
     <h1 id="score"></h1>
     <p>Vous pouvez montrer votre score aux autres membres du serveur</p>
@@ -132,89 +126,67 @@
 </div>
 
 <script>
-/* ---------------------------
-   PAYS + CAPITALES
-----------------------------*/
-const COUNTRIES = [
-    { name: "France",   capital: "Paris",        difficulty: "easy" },
-    { name: "Espagne",  capital: "Madrid",       difficulty: "easy" },
-    { name: "Italie",   capital: "Rome",         difficulty: "easy" },
-    { name: "Allemagne",capital: "Berlin",       difficulty: "easy" },
-    { name: "Portugal", capital: "Lisbonne",     difficulty: "medium" },
-    { name: "Turquie",  capital: "Ankara",       difficulty: "medium" },
-    { name: "Égypte",   capital: "Le Caire",     difficulty: "medium" },
-    { name: "Mongolie", capital: "Oulan-Bator",  difficulty: "hard" },
-    { name: "Tanzanie", capital: "Dodoma",       difficulty: "hard" }
-];
 
-/* ---------------------------
-   GEOJSON intégré (simplifié)
-----------------------------*/
-const GEOJSON = {
-"type":"FeatureCollection",
-"features":[
-    {"type":"Feature","properties":{"ADMIN":"France"},"geometry":{"type":"Polygon","coordinates":[[[ -5, 42 ],[ 8, 42 ],[ 8, 51 ],[ -5, 51 ],[ -5, 42 ]]]}},
-    {"type":"Feature","properties":{"ADMIN":"Espagne"},"geometry":{"type":"Polygon","coordinates":[[[ -10, 36 ],[ 4, 36 ],[ 4, 44 ],[ -10, 44 ],[ -10, 36 ]]]}},
-    {"type":"Feature","properties":{"ADMIN":"Italie"},"geometry":{"type":"Polygon","coordinates":[[[ 8, 37 ],[ 19, 37 ],[ 19, 47 ],[ 8, 47 ],[ 8, 37 ]]]}},
-    {"type":"Feature","properties":{"ADMIN":"Allemagne"},"geometry":{"type":"Polygon","coordinates":[[[ 5, 47 ],[ 15, 47 ],[ 15, 55 ],[ 5, 55 ],[ 5, 47 ]]]}},
-    {"type":"Feature","properties":{"ADMIN":"Portugal"},"geometry":{"type":"Polygon","coordinates":[[[ -10, 36 ],[ -6, 36 ],[ -6, 43 ],[ -10, 43 ],[ -10, 36 ]]]}},
-    {"type":"Feature","properties":{"ADMIN":"Turquie"},"geometry":{"type":"Polygon","coordinates":[[[ 26, 36 ],[ 45, 36 ],[ 45, 42 ],[ 26, 42 ],[ 26, 36 ]]]}},
-    {"type":"Feature","properties":{"ADMIN":"Égypte"},"geometry":{"type":"Polygon","coordinates":[[[ 25, 22 ],[ 36, 22 ],[ 36, 32 ],[ 25, 32 ],[ 25, 22 ]]]}},
-    {"type":"Feature","properties":{"ADMIN":"Mongolie"},"geometry":{"type":"Polygon","coordinates":[[[ 87, 41 ],[ 120, 41 ],[ 120, 52 ],[ 87, 52 ],[ 87, 41 ]]]}},
-    {"type":"Feature","properties":{"ADMIN":"Tanzanie"},"geometry":{"type":"Polygon","coordinates":[[[ 29, -12 ],[ 40, -12 ],[ 40, 0 ],[ 29, 0 ],[ 29, -12 ]]]}}
-]};
+// ---------------------------
+// 1) GEOJSON MONDIAL (COLLER BLOC 2 ICI)
+// ---------------------------
 
-/* ---------------------------
-   VARIABLES DU JEU
-----------------------------*/
+const WORLD = null; // remplacé par BLOC 2
+
+// ---------------------------
+// 2) LISTE DES CAPITALES (COLLER BLOC 3 ICI)
+// ---------------------------
+
+const CAPITALS = null; // remplacé par BLOC 3
+
+// ---------------------------
+// VARIABLES DU JEU
+// ---------------------------
+
 let map;
 let geojsonLayer;
-let difficulty;
+let countries = [];
 let questions = [];
 let index = 0;
 let score = 0;
-let totalQuestions = 0;
+let totalQuestions = 20;
 
-/* ---------------------------
-   INITIALISATION CARTE
-----------------------------*/
+// ---------------------------
+// INITIALISATION CARTE
+// ---------------------------
+
 function initMap() {
     map = L.map('map').setView([20, 0], 2);
 
-    // Fond sans labels (pas de villes)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png', {
         maxZoom: 6
     }).addTo(map);
 
-    geojsonLayer = L.geoJSON(GEOJSON, {
+    geojsonLayer = L.geoJSON(WORLD, {
         style: {
             color: "#555",
             weight: 1,
             fillOpacity: 0.1
         },
         onEachFeature: (feature, layer) => {
-            layer.on("click", () => onCountryClick(feature.properties.ADMIN));
+            const name = feature.properties.ADMIN;
+            layer.on("click", () => onCountryClick(name));
+            countries.push(name);
         }
     }).addTo(map);
 }
 
-/* ---------------------------
-   DÉMARRER LE JEU
-----------------------------*/
-function startGame(diff) {
-    difficulty = diff;
+// ---------------------------
+// DÉMARRER LE JEU
+// ---------------------------
+
+function startGame() {
     score = 0;
     index = 0;
 
-    let pool = COUNTRIES.filter(c => {
-        if (diff === "easy") return c.difficulty === "easy";
-        if (diff === "medium") return c.difficulty !== "hard";
-        return true;
-    });
+    const valid = Object.keys(CAPITALS).filter(c => countries.includes(c));
 
-    pool = pool.sort(() => Math.random() - 0.5);
-    totalQuestions = Math.min(20, pool.length);
-    questions = pool.slice(0, totalQuestions);
+    questions = valid.sort(() => Math.random() - 0.5).slice(0, totalQuestions);
 
     document.getElementById("home").style.display = "none";
     document.getElementById("quiz").style.display = "flex";
@@ -226,40 +198,35 @@ function startGame(diff) {
     loadQuestion();
 }
 
-/* ---------------------------
-   CHARGER QUESTION
-----------------------------*/
+// ---------------------------
+// CHARGER QUESTION
+// ---------------------------
+
 function loadQuestion() {
-    const q = questions[index];
-    if (!q) {
-        endGame();
-        return;
-    }
-    document.getElementById("capital").textContent = q.capital;
+    const country = questions[index];
+    document.getElementById("capital").textContent = CAPITALS[country];
     document.getElementById("qnum").textContent = index + 1;
     document.getElementById("qscore").textContent = score;
 }
 
-/* ---------------------------
-   CLIQUE SUR UN PAYS
-----------------------------*/
-function onCountryClick(clickedName) {
-    const q = questions[index];
-    if (!q) return;
+// ---------------------------
+// CLIQUE SUR UN PAYS
+// ---------------------------
 
-    if (clickedName === q.name) {
+function onCountryClick(clicked) {
+    const correct = questions[index];
+
+    if (clicked === correct) {
         score++;
-        highlightCountry(clickedName, "green");
+        highlight(clicked, "green");
     } else {
-        highlightCountry(clickedName, "red");
-        highlightCountry(q.name, "green");
+        highlight(clicked, "red");
+        highlight(correct, "green");
     }
 
     index++;
     if (index >= totalQuestions) {
-        setTimeout(() => {
-            endGame();
-        }, 800);
+        setTimeout(endGame, 800);
         return;
     }
 
@@ -269,10 +236,11 @@ function onCountryClick(clickedName) {
     }, 1200);
 }
 
-/* ---------------------------
-   COLORIER UN PAYS
-----------------------------*/
-function highlightCountry(name, color) {
+// ---------------------------
+// COLORIER UN PAYS
+// ---------------------------
+
+function highlight(name, color) {
     geojsonLayer.eachLayer(layer => {
         if (layer.feature.properties.ADMIN === name) {
             layer.setStyle({
@@ -284,9 +252,6 @@ function highlightCountry(name, color) {
     });
 }
 
-/* ---------------------------
-   RESET STYLE
-----------------------------*/
 function resetStyles() {
     geojsonLayer.eachLayer(layer => {
         layer.setStyle({
@@ -297,9 +262,10 @@ function resetStyles() {
     });
 }
 
-/* ---------------------------
-   FIN DU JEU
-----------------------------*/
+// ---------------------------
+// FIN DU JEU
+// ---------------------------
+
 function endGame() {
     document.getElementById("quiz").style.display = "none";
     document.getElementById("result").style.display = "flex";
@@ -307,13 +273,11 @@ function endGame() {
     document.getElementById("score").textContent = `Score : ${score} / ${totalQuestions}`;
 }
 
-/* ---------------------------
-   RETOUR ACCUEIL
-----------------------------*/
 function goHome() {
     document.getElementById("result").style.display = "none";
     document.getElementById("home").style.display = "flex";
 }
+
 </script>
 
 </body>
