@@ -115,7 +115,7 @@
 <div id="quiz">
     <div id="question-box">
         <div id="meta">
-            Question <span id="qnum">1</span> / 20 · Score : <span id="qscore">0</span>
+            Question <span id="qnum">1</span> / <span id="qtotal">20</span> · Score : <span id="qscore">0</span>
         </div>
         <div>
             Capitale : <span id="capital"></span>
@@ -136,15 +136,15 @@
    PAYS + CAPITALES
 ----------------------------*/
 const COUNTRIES = [
-    { name: "France",   capital: "Paris", difficulty: "easy" },
-    { name: "Espagne",  capital: "Madrid", difficulty: "easy" },
-    { name: "Italie",   capital: "Rome", difficulty: "easy" },
-    { name: "Allemagne",capital: "Berlin", difficulty: "easy" },
-    { name: "Portugal", capital: "Lisbonne", difficulty: "medium" },
-    { name: "Turquie",  capital: "Ankara", difficulty: "medium" },
-    { name: "Égypte",   capital: "Le Caire", difficulty: "medium" },
-    { name: "Mongolie", capital: "Oulan-Bator", difficulty: "hard" },
-    { name: "Tanzanie", capital: "Dodoma", difficulty: "hard" }
+    { name: "France",   capital: "Paris",        difficulty: "easy" },
+    { name: "Espagne",  capital: "Madrid",       difficulty: "easy" },
+    { name: "Italie",   capital: "Rome",         difficulty: "easy" },
+    { name: "Allemagne",capital: "Berlin",       difficulty: "easy" },
+    { name: "Portugal", capital: "Lisbonne",     difficulty: "medium" },
+    { name: "Turquie",  capital: "Ankara",       difficulty: "medium" },
+    { name: "Égypte",   capital: "Le Caire",     difficulty: "medium" },
+    { name: "Mongolie", capital: "Oulan-Bator",  difficulty: "hard" },
+    { name: "Tanzanie", capital: "Dodoma",       difficulty: "hard" }
 ];
 
 /* ---------------------------
@@ -173,6 +173,7 @@ let difficulty;
 let questions = [];
 let index = 0;
 let score = 0;
+let totalQuestions = 0;
 
 /* ---------------------------
    INITIALISATION CARTE
@@ -180,12 +181,11 @@ let score = 0;
 function initMap() {
     map = L.map('map').setView([20, 0], 2);
 
-    // Fond sans labels
+    // Fond sans labels (pas de villes)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png', {
         maxZoom: 6
     }).addTo(map);
 
-    // Ajout du GeoJSON intégré
     geojsonLayer = L.geoJSON(GEOJSON, {
         style: {
             color: "#555",
@@ -206,14 +206,20 @@ function startGame(diff) {
     score = 0;
     index = 0;
 
-    questions = COUNTRIES.filter(c => {
+    let pool = COUNTRIES.filter(c => {
         if (diff === "easy") return c.difficulty === "easy";
         if (diff === "medium") return c.difficulty !== "hard";
         return true;
-    }).sort(() => Math.random() - 0.5).slice(0, 20);
+    });
+
+    pool = pool.sort(() => Math.random() - 0.5);
+    totalQuestions = Math.min(20, pool.length);
+    questions = pool.slice(0, totalQuestions);
 
     document.getElementById("home").style.display = "none";
     document.getElementById("quiz").style.display = "flex";
+
+    document.getElementById("qtotal").textContent = totalQuestions;
 
     if (!map) initMap();
 
@@ -225,6 +231,10 @@ function startGame(diff) {
 ----------------------------*/
 function loadQuestion() {
     const q = questions[index];
+    if (!q) {
+        endGame();
+        return;
+    }
     document.getElementById("capital").textContent = q.capital;
     document.getElementById("qnum").textContent = index + 1;
     document.getElementById("qscore").textContent = score;
@@ -235,6 +245,7 @@ function loadQuestion() {
 ----------------------------*/
 function onCountryClick(clickedName) {
     const q = questions[index];
+    if (!q) return;
 
     if (clickedName === q.name) {
         score++;
@@ -245,7 +256,12 @@ function onCountryClick(clickedName) {
     }
 
     index++;
-    if (index >= 20) return endGame();
+    if (index >= totalQuestions) {
+        setTimeout(() => {
+            endGame();
+        }, 800);
+        return;
+    }
 
     setTimeout(() => {
         resetStyles();
@@ -288,7 +304,7 @@ function endGame() {
     document.getElementById("quiz").style.display = "none";
     document.getElementById("result").style.display = "flex";
 
-    document.getElementById("score").textContent = `Score : ${score} / 20`;
+    document.getElementById("score").textContent = `Score : ${score} / ${totalQuestions}`;
 }
 
 /* ---------------------------
