@@ -16,7 +16,6 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       max-width: 320px; z-index: 10; font-size: 14px;
     }
-
     #panel h2 { margin: 0 0 6px; font-size: 16px; }
     #panel label { display: block; margin-top: 6px; }
     #panel input[type="text"] { width: 100%; padding: 4px 6px; box-sizing: border-box; }
@@ -38,6 +37,28 @@
     }
     #tools button { padding: 4px 8px; }
 
+    /* PANEL AMIS DROITE */
+    #friends-panel {
+      position: absolute; top: 10px; right: 10px;
+      width: 220px;
+      background: rgba(255,255,255,0.95);
+      padding: 10px; border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10; font-size: 14px;
+    }
+    #friends-panel h3 { margin: 0 0 6px; font-size: 15px; }
+    #friends-list {
+      max-height: 260px; overflow-y: auto;
+      margin-top: 6px; border: 1px solid #ddd;
+      border-radius: 6px; padding: 4px; background: #f9fafb;
+    }
+    .friend-item {
+      padding: 4px; border-radius: 4px; cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 13px;
+    }
+    .friend-item:hover { background: #e5e7eb; }
+
     /* CHAT SALON */
     #chat-toggle {
       position: absolute; bottom: 20px; right: 20px;
@@ -45,7 +66,6 @@
       padding: 12px; border-radius: 50%;
       cursor: pointer; z-index: 10;
     }
-
     #chat-window {
       position: absolute; bottom: 80px; right: 20px;
       width: 260px; height: 300px;
@@ -53,21 +73,38 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.25);
       display: none; flex-direction: column; overflow: hidden; z-index: 10;
     }
-
     #chat-header {
       background: #111827; color: white;
       padding: 8px; text-align: center; font-weight: bold; font-size: 14px;
     }
-
     #chat-messages { flex: 1; padding: 8px; overflow-y: auto; font-size: 13px; }
     #chat-input-area { display: flex; border-top: 1px solid #ccc; }
     #chat-input { flex: 1; padding: 6px; border: none; outline: none; font-size: 13px; }
     #chat-send { padding: 6px 10px; background: #111827; color: white; border: none; cursor: pointer; font-size: 13px; }
 
+    /* DM PRIVÉS (alignés horizontalement) */
+    .dm-window {
+      position: absolute;
+      bottom: 80px;
+      width: 260px; height: 260px;
+      background: white; border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      display: flex; flex-direction: column; overflow: hidden; z-index: 11;
+    }
+    .dm-header {
+      background: #1f2937; color: white;
+      padding: 6px; font-size: 13px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .dm-messages { flex: 1; padding: 6px; overflow-y: auto; font-size: 13px; }
+    .dm-input-area { display: flex; border-top: 1px solid #ccc; }
+    .dm-input { flex: 1; padding: 6px; border: none; outline: none; font-size: 13px; }
+    .dm-send { padding: 6px 10px; background: #1f2937; color: white; border: none; cursor: pointer; font-size: 13px; }
+
     /* NOTIFS */
     #notif {
-      position: absolute; top: 10px; right: 50%;
-      transform: translateX(50%);
+      position: absolute; top: 10px; left: 50%;
+      transform: translateX(-50%);
       background: #111827; color: white;
       padding: 8px 12px; border-radius: 8px;
       font-size: 13px; display: none; z-index: 20;
@@ -125,6 +162,16 @@
   <div style="margin-top:6px;font-size:12px;color:#4b5563;">
     Lien d’invitation : <span id="invite-link" style="word-break:break-all;"></span>
   </div>
+</div>
+
+<!-- PANEL AMIS -->
+<div id="friends-panel">
+  <h3>Amis</h3>
+  <label>Ajouter un ami :
+    <input id="friend-name" type="text" placeholder="Pseudo" />
+  </label>
+  <button id="add-friend-btn">Ajouter</button>
+  <div id="friends-list"></div>
 </div>
 
 <!-- CHAT SALON -->
@@ -212,6 +259,107 @@ ws.onopen = () => {
   }
 };
 
+const friends = new Set();
+const dmWindows = new Map(); // pseudo -> {root, messages, input}
+
+/* ================== DM WINDOWS ================== */
+function layoutDmWindows() {
+  let index = 0;
+  dmWindows.forEach((obj) => {
+    obj.root.style.right = (20 + index * 270) + "px";
+    index++;
+  });
+}
+
+function createDmWindow(friend) {
+  if (dmWindows.has(friend)) return dmWindows.get(friend);
+
+  const root = document.createElement("div");
+  root.className = "dm-window";
+
+  const header = document.createElement("div");
+  header.className = "dm-header";
+  const title = document.createElement("span");
+  title.textContent = "DM avec " + friend;
+  const closeBtn = document.createElement("button");
+  closeBtn.textContent = "×";
+  closeBtn.style.border = "none";
+  closeBtn.style.background = "transparent";
+  closeBtn.style.color = "white";
+  closeBtn.style.cursor = "pointer";
+  closeBtn.onclick = () => {
+    root.remove();
+    dmWindows.delete(friend);
+    layoutDmWindows();
+  };
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+
+  const messages = document.createElement("div");
+  messages.className = "dm-messages";
+
+  const inputArea = document.createElement("div");
+  inputArea.className = "dm-input-area";
+  const input = document.createElement("input");
+  input.className = "dm-input";
+  input.placeholder = "Message privé...";
+  const sendBtn = document.createElement("button");
+  sendBtn.className = "dm-send";
+  sendBtn.textContent = "Envoyer";
+
+  function sendDm() {
+    const text = input.value.trim();
+    if (!text) return;
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "privateChat", to: friend, message: text }));
+    }
+    input.value = "";
+  }
+
+  sendBtn.onclick = sendDm;
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendDm();
+  });
+
+  inputArea.appendChild(input);
+  inputArea.appendChild(sendBtn);
+
+  root.appendChild(header);
+  root.appendChild(messages);
+  root.appendChild(inputArea);
+
+  document.body.appendChild(root);
+
+  const obj = { root, messages, input };
+  dmWindows.set(friend, obj);
+  layoutDmWindows();
+  return obj;
+}
+
+function addDmMessage(friend, from, message) {
+  const dm = createDmWindow(friend);
+  const line = document.createElement("div");
+  line.innerHTML = `<strong>${from} :</strong> ${message}`;
+  dm.messages.appendChild(line);
+  dm.messages.scrollTop = dm.messages.scrollHeight;
+}
+
+/* ================== AMIS UI ================== */
+function addFriendToList(name) {
+  if (friends.has(name)) return;
+  friends.add(name);
+  const list = document.getElementById("friends-list");
+  const div = document.createElement("div");
+  div.className = "friend-item";
+  div.innerHTML = `<span>${name}</span><span style="font-size:11px;color:#6b7280;">DM</span>`;
+  div.onclick = () => {
+    const dm = createDmWindow(name);
+    dm.root.style.display = "flex";
+  };
+  list.appendChild(div);
+}
+
+/* ================== MESSAGES SERVEUR ================== */
 ws.onmessage = (event) => {
   const msg = JSON.parse(event.data);
 
@@ -303,9 +451,47 @@ ws.onmessage = (event) => {
     drawLine(msg.x1, msg.y1, msg.x2, msg.y2, msg.color, msg.size);
   }
 
-  /* ERREURS */
+  /* AMIS */
+  if (msg.type === "friendRequest") {
+    showPopup(`${msg.from} veut t’ajouter en ami`, [
+      {
+        label: "Accepter",
+        onClick: () => {
+          ws.send(JSON.stringify({ type: "friendResponse", from: msg.from, accept: true }));
+        }
+      },
+      {
+        label: "Refuser",
+        onClick: () => {
+          ws.send(JSON.stringify({ type: "friendResponse", from: msg.from, accept: false }));
+        }
+      }
+    ]);
+  }
+
+  if (msg.type === "friendAdded") {
+    addFriendToList(msg.friend);
+    showNotif(`${msg.friend} est maintenant ton ami.`);
+  }
+
+  /* DM PRIVÉS */
+  if (msg.type === "privateChat") {
+    const friend = (msg.from === pseudo) ? msg.to : msg.from;
+    addFriendToList(friend);
+    // DM ne s’ouvre pas automatiquement : on ajoute juste le message dans la fenêtre si elle existe
+    if (dmWindows.has(friend)) {
+      addDmMessage(friend, msg.from, msg.message);
+    } else {
+      showNotif(`Nouveau message privé de ${friend}`);
+    }
+  }
+
+  /* ERREURS / INFOS */
   if (msg.type === "error") {
     showNotif(msg.message || "Erreur");
+  }
+  if (msg.type === "info") {
+    showNotif(msg.message || "Info");
   }
 };
 
@@ -429,7 +615,19 @@ document.getElementById("invite-btn").addEventListener("click", () => {
   }
 });
 
-/* ================== CHAT SALON ================== */
+/* AMIS */
+document.getElementById("add-friend-btn").addEventListener("click", () => {
+  const target = document.getElementById("friend-name").value.trim();
+  if (!target) {
+    showNotif("Entre un pseudo à ajouter.");
+    return;
+  }
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "addFriend", target }));
+  }
+});
+
+/* CHAT SALON */
 document.getElementById("chat-toggle").addEventListener("click", () => {
   const win = document.getElementById("chat-window");
   win.style.display = (win.style.display === "none" || win.style.display === "") ? "flex" : "none";
