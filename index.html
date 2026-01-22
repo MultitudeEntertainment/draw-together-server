@@ -61,9 +61,17 @@
 
     #question-box {
         background: #161b22;
-        padding: 15px;
+        padding: 10px 15px;
         text-align: center;
-        font-size: 1.3rem;
+        font-size: 1.1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    #meta {
+        font-size: 0.9rem;
+        color: #9ca3af;
     }
 
     #map {
@@ -106,7 +114,12 @@
 <!-- QUIZ -->
 <div id="quiz">
     <div id="question-box">
-        Capitale : <span id="capital"></span>
+        <div id="meta">
+            Question <span id="qnum">1</span> / 20 · Score : <span id="qscore">0</span>
+        </div>
+        <div>
+            Capitale : <span id="capital"></span>
+        </div>
     </div>
     <div id="map"></div>
 </div>
@@ -119,28 +132,22 @@
 </div>
 
 <script>
-/* ---------------------------
-   BASE DE DONNÉES PAYS
-----------------------------*/
 const COUNTRIES = [
-    { name: "France", capital: "Paris", difficulty: "easy" },
-    { name: "Espagne", capital: "Madrid", difficulty: "easy" },
-    { name: "Italie", capital: "Rome", difficulty: "easy" },
-    { name: "Canada", capital: "Ottawa", difficulty: "easy" },
-    { name: "Japon", capital: "Tokyo", difficulty: "easy" },
+    { name: "France",   capital: "Paris",        difficulty: "easy" },
+    { name: "Espagne",  capital: "Madrid",      difficulty: "easy" },
+    { name: "Italie",   capital: "Rome",        difficulty: "easy" },
+    { name: "Canada",   capital: "Ottawa",      difficulty: "easy" },
+    { name: "Japon",    capital: "Tokyo",       difficulty: "easy" },
 
-    { name: "Portugal", capital: "Lisbonne", difficulty: "medium" },
-    { name: "Turquie", capital: "Ankara", difficulty: "medium" },
-    { name: "Égypte", capital: "Le Caire", difficulty: "medium" },
+    { name: "Portugal", capital: "Lisbonne",    difficulty: "medium" },
+    { name: "Turquie",  capital: "Ankara",      difficulty: "medium" },
+    { name: "Égypte",   capital: "Le Caire",    difficulty: "medium" },
 
     { name: "Mongolie", capital: "Oulan-Bator", difficulty: "hard" },
-    { name: "Bhoutan", capital: "Thimphou", difficulty: "hard" },
-    { name: "Tanzanie", capital: "Dodoma", difficulty: "hard" }
+    { name: "Bhoutan",  capital: "Thimphou",    difficulty: "hard" },
+    { name: "Tanzanie", capital: "Dodoma",      difficulty: "hard" }
 ];
 
-/* ---------------------------
-   VARIABLES DU JEU
-----------------------------*/
 let map;
 let geojsonLayer;
 let difficulty;
@@ -148,17 +155,14 @@ let questions = [];
 let index = 0;
 let score = 0;
 
-/* ---------------------------
-   INITIALISATION CARTE
-----------------------------*/
 function initMap() {
     map = L.map('map').setView([20, 0], 2);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Fond de carte SANS labels (pas de villes, pas de noms)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png', {
         maxZoom: 6
     }).addTo(map);
 
-    // Charger frontières du monde
     fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson")
         .then(res => res.json())
         .then(data => {
@@ -175,9 +179,6 @@ function initMap() {
         });
 }
 
-/* ---------------------------
-   DÉMARRER LE JEU
-----------------------------*/
 function startGame(diff) {
     difficulty = diff;
     score = 0;
@@ -197,17 +198,13 @@ function startGame(diff) {
     loadQuestion();
 }
 
-/* ---------------------------
-   CHARGER QUESTION
-----------------------------*/
 function loadQuestion() {
     const q = questions[index];
     document.getElementById("capital").textContent = q.capital;
+    document.getElementById("qnum").textContent = index + 1;
+    document.getElementById("qscore").textContent = score;
 }
 
-/* ---------------------------
-   CLIQUE SUR UN PAYS
-----------------------------*/
 function onCountryClick(clickedName) {
     const q = questions[index];
 
@@ -228,10 +225,8 @@ function onCountryClick(clickedName) {
     }, 1200);
 }
 
-/* ---------------------------
-   COLORIER UN PAYS
-----------------------------*/
 function highlightCountry(name, color) {
+    if (!geojsonLayer) return;
     geojsonLayer.eachLayer(layer => {
         if (layer.feature.properties.ADMIN === name) {
             layer.setStyle({
@@ -243,10 +238,8 @@ function highlightCountry(name, color) {
     });
 }
 
-/* ---------------------------
-   RESET STYLE
-----------------------------*/
 function resetStyles() {
+    if (!geojsonLayer) return;
     geojsonLayer.eachLayer(layer => {
         layer.setStyle({
             color: "#555",
@@ -256,9 +249,6 @@ function resetStyles() {
     });
 }
 
-/* ---------------------------
-   FIN DU JEU
-----------------------------*/
 function endGame() {
     document.getElementById("quiz").style.display = "none";
     document.getElementById("result").style.display = "flex";
@@ -266,9 +256,6 @@ function endGame() {
     document.getElementById("score").textContent = `Score : ${score} / 20`;
 }
 
-/* ---------------------------
-   RETOUR ACCUEIL
-----------------------------*/
 function goHome() {
     document.getElementById("result").style.display = "none";
     document.getElementById("home").style.display = "flex";
@@ -277,4 +264,3 @@ function goHome() {
 
 </body>
 </html>
-
