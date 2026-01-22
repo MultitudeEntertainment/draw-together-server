@@ -4,29 +4,32 @@
 <meta charset="UTF-8">
 <title>Quiz Capitales – Trouve le pays</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <style>
+    * { box-sizing: border-box; }
     body {
         margin: 0;
         background: #0d1117;
-        color: white;
-        font-family: Arial, sans-serif;
+        color: #f9fafb;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         height: 100vh;
         overflow: hidden;
         display: flex;
         justify-content: center;
         align-items: center;
     }
-
+    #app {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
     #home {
-        width: 350px;
-        height: 350px;
-        background: #161b22;
+        width: 340px;
+        height: 340px;
+        background: #111827;
         border-radius: 20px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.4);
+        box-shadow: 0 0 30px rgba(0,0,0,0.5);
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -35,17 +38,30 @@
         text-align: center;
         padding: 20px;
     }
-
+    #home h2 {
+        margin: 0;
+        font-size: 1.4rem;
+    }
+    #home p {
+        margin: 0;
+        font-size: 0.95rem;
+        color: #9ca3af;
+    }
     .btn {
         padding: 12px 20px;
         border-radius: 10px;
         border: none;
         cursor: pointer;
-        width: 200px;
-        font-size: 1.1rem;
+        width: 220px;
+        font-size: 1rem;
         color: white;
+        transition: transform 0.1s, box-shadow 0.1s, opacity 0.1s;
     }
-
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+        opacity: 0.95;
+    }
     .easy { background: #22c55e; }
     .medium { background: #f59e0b; }
     .hard { background: #ef4444; }
@@ -55,26 +71,64 @@
         height: 100%;
         display: none;
         flex-direction: column;
+        background: #020617;
     }
-
     #question-box {
-        background: #161b22;
-        padding: 10px 15px;
+        background: #111827;
+        padding: 10px 16px;
         text-align: center;
-        font-size: 1.1rem;
+        font-size: 1rem;
         display: flex;
         flex-direction: column;
         gap: 4px;
+        border-bottom: 1px solid #1f2937;
     }
-
     #meta {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: #9ca3af;
     }
-
-    #map {
+    #capital {
+        font-weight: 600;
+        color: #e5e7eb;
+    }
+    #map-wrapper {
         flex: 1;
         width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 6px;
+    }
+    #map {
+        width: 100%;
+        height: 100%;
+        max-width: 900px;
+        max-height: 520px;
+        background: radial-gradient(circle at top, #1f2937 0, #020617 55%);
+        border-radius: 12px;
+        box-shadow: 0 0 30px rgba(0,0,0,0.6);
+    }
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+    .country {
+        fill: #1f2937;
+        stroke: #4b5563;
+        stroke-width: 0.6;
+        cursor: pointer;
+        transition: fill 0.15s, stroke 0.15s, opacity 0.15s;
+    }
+    .country:hover {
+        fill: #374151;
+    }
+    .country.correct {
+        fill: #16a34a !important;
+        stroke: #22c55e !important;
+    }
+    .country.wrong {
+        fill: #b91c1c !important;
+        stroke: #ef4444 !important;
     }
 
     #result {
@@ -82,10 +136,19 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        gap: 20px;
+        gap: 18px;
         text-align: center;
+        padding: 20px;
     }
-
+    #result h1 {
+        margin: 0;
+        font-size: 1.6rem;
+    }
+    #result p {
+        margin: 0;
+        font-size: 0.95rem;
+        color: #9ca3af;
+    }
     #restart {
         background: #3b82f6;
         padding: 12px 20px;
@@ -93,192 +156,364 @@
         border: none;
         color: white;
         cursor: pointer;
+        font-size: 1rem;
+        transition: transform 0.1s, box-shadow 0.1s, opacity 0.1s;
+    }
+    #restart:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+        opacity: 0.95;
+    }
+
+    @media (max-width: 600px) {
+        #home {
+            width: 90%;
+            height: auto;
+        }
+        #question-box {
+            font-size: 0.9rem;
+        }
     }
 </style>
 </head>
 <body>
+<div id="app">
 
-<div id="home">
-    <h2>🌍 Quiz des Capitales</h2>
-    <p>Clique le pays correspondant à la capitale</p>
+    <div id="home">
+        <h2>🌍 Quiz des Capitales</h2>
+        <p>Clique sur le pays correspondant à la capitale affichée</p>
+        <button class="btn easy" onclick="startGame('easy')">Facile</button>
+        <button class="btn medium" onclick="startGame('medium')">Moyen</button>
+        <button class="btn hard" onclick="startGame('hard')">Difficile</button>
+    </div>
 
-    <button class="btn easy" onclick="startGame('easy')">Facile</button>
-    <button class="btn medium" onclick="startGame('medium')">Moyen</button>
-    <button class="btn hard" onclick="startGame('hard')">Difficile</button>
-</div>
-
-<div id="quiz">
-    <div id="question-box">
-        <div id="meta">
-            Question <span id="qnum">1</span> / <span id="qtotal">20</span> · Score : <span id="qscore">0</span>
+    <div id="quiz">
+        <div id="question-box">
+            <div id="meta">
+                Question <span id="qnum">1</span> / <span id="qtotal">20</span> · Score : <span id="qscore">0</span>
+            </div>
+            <div>
+                Capitale : <span id="capital"></span>
+            </div>
         </div>
-        <div>
-            Capitale : <span id="capital"></span>
+        <div id="map-wrapper">
+            <div id="map">
+                <!-- Carte SVG stylisée, tous les pays sont des zones cliquables -->
+                <svg viewBox="-180 -90 360 180" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Amérique du Nord -->
+                    <rect class="country" data-country="Canada" x="-140" y="-70" width="80" height="30"/>
+                    <rect class="country" data-country="United States" x="-140" y="-40" width="80" height="25"/>
+                    <rect class="country" data-country="Mexico" x="-130" y="-20" width="50" height="18"/>
+
+                    <!-- Amérique du Sud -->
+                    <rect class="country" data-country="Brazil" x="-80" y="-40" width="50" height="35"/>
+                    <rect class="country" data-country="Argentina" x="-80" y="-75" width="35" height="25"/>
+                    <rect class="country" data-country="Chile" x="-90" y="-75" width="10" height="35"/>
+                    <rect class="country" data-country="Colombia" x="-90" y="-25" width="25" height="18"/>
+                    <rect class="country" data-country="Peru" x="-90" y="-45" width="25" height="20"/>
+                    <rect class="country" data-country="Venezuela" x="-80" y="-20" width="25" height="15"/>
+
+                    <!-- Europe de l'Ouest -->
+                    <rect class="country" data-country="United Kingdom" x="-20" y="-10" width="10" height="10"/>
+                    <rect class="country" data-country="Ireland" x="-28" y="-10" width="6" height="8"/>
+                    <rect class="country" data-country="France" x="-10" y="-5" width="15" height="10"/>
+                    <rect class="country" data-country="Spain" x="-15" y="-10" width="15" height="10"/>
+                    <rect class="country" data-country="Portugal" x="-20" y="-10" width="5" height="8"/>
+                    <rect class="country" data-country="Belgium" x="-5" y="-2" width="4" height="4"/>
+                    <rect class="country" data-country="Netherlands" x="-5" y="-6" width="4" height="4"/>
+                    <rect class="country" data-country="Germany" x="0" y="-5" width="10" height="10"/>
+                    <rect class="country" data-country="Switzerland" x="2" y="-1" width="4" height="4"/>
+                    <rect class="country" data-country="Italy" x="8" y="-5" width="8" height="12"/>
+                    <rect class="country" data-country="Austria" x="8" y="-1" width="6" height="4"/>
+                    <rect class="country" data-country="Poland" x="8" y="-10" width="10" height="8"/>
+                    <rect class="country" data-country="Czech Republic" x="6" y="-4" width="4" height="4"/>
+                    <rect class="country" data-country="Hungary" x="10" y="-2" width="5" height="4"/>
+                    <rect class="country" data-country="Greece" x="12" y="4" width="6" height="6"/>
+
+                    <!-- Europe du Nord -->
+                    <rect class="country" data-country="Norway" x="0" y="-25" width="8" height="12"/>
+                    <rect class="country" data-country="Sweden" x="8" y="-25" width="8" height="12"/>
+                    <rect class="country" data-country="Finland" x="16" y="-25" width="8" height="12"/>
+
+                    <!-- Europe de l'Est / Russie -->
+                    <rect class="country" data-country="Ukraine" x="18" y="-8" width="12" height="8"/>
+                    <rect class="country" data-country="Russia" x="30" y="-25" width="60" height="25"/>
+
+                    <!-- Afrique du Nord -->
+                    <rect class="country" data-country="Morocco" x="-15" y="5" width="10" height="8"/>
+                    <rect class="country" data-country="Algeria" x="-5" y="5" width="15" height="12"/>
+                    <rect class="country" data-country="Tunisia" x="5" y="3" width="6" height="4"/>
+                    <rect class="country" data-country="Libya" x="8" y="5" width="12" height="10"/>
+                    <rect class="country" data-country="Egypt" x="20" y="5" width="12" height="10"/>
+
+                    <!-- Afrique subsaharienne -->
+                    <rect class="country" data-country="Nigeria" x="10" y="15" width="12" height="10"/>
+                    <rect class="country" data-country="Ethiopia" x="25" y="15" width="10" height="10"/>
+                    <rect class="country" data-country="Kenya" x="28" y="22" width="8" height="8"/>
+                    <rect class="country" data-country="Tanzania" x="30" y="28" width="10" height="10"/>
+                    <rect class="country" data-country="South Africa" x="20" y="40" width="18" height="12"/>
+
+                    <!-- Moyen-Orient -->
+                    <rect class="country" data-country="Turkey" x="20" y="-2" width="14" height="8"/>
+                    <rect class="country" data-country="Saudi Arabia" x="28" y="8" width="14" height="12"/>
+                    <rect class="country" data-country="Iran" x="34" y="0" width="14" height="10"/>
+                    <rect class="country" data-country="Iraq" x="30" y="2" width="8" height="8"/>
+                    <rect class="country" data-country="Syria" x="28" y="0" width="6" height="6"/>
+                    <rect class="country" data-country="Israel" x="26" y="6" width="2" height="3"/>
+
+                    <!-- Asie du Sud -->
+                    <rect class="country" data-country="India" x="45" y="10" width="16" height="14"/>
+                    <rect class="country" data-country="Pakistan" x="40" y="6" width="8" height="10"/>
+                    <rect class="country" data-country="Afghanistan" x="40" y="0" width="8" height="8"/>
+                    <rect class="country" data-country="Bangladesh" x="58" y="12" width="6" height="8"/>
+                    <rect class="country" data-country="Sri Lanka" x="52" y="24" width="4" height="4"/>
+
+                    <!-- Asie de l'Est -->
+                    <rect class="country" data-country="China" x="55" y="-5" width="30" height="20"/>
+                    <rect class="country" data-country="Mongolia" x="55" y="-15" width="25" height="8"/>
+                    <rect class="country" data-country="Japan" x="88" y="-5" width="6" height="14"/>
+                    <rect class="country" data-country="North Korea" x="78" y="-4" width="6" height="6"/>
+                    <rect class="country" data-country="South Korea" x="78" y="2" width="6" height="6"/>
+
+                    <!-- Asie du Sud-Est -->
+                    <rect class="country" data-country="Thailand" x="65" y="10" width="8" height="10"/>
+                    <rect class="country" data-country="Vietnam" x="72" y="12" width="6" height="12"/>
+                    <rect class="country" data-country="Cambodia" x="70" y="14" width="4" height="6"/>
+                    <rect class="country" data-country="Laos" x="70" y="8" width="4" height="6"/>
+                    <rect class="country" data-country="Myanmar" x="64" y="6" width="8" height="10"/>
+                    <rect class="country" data-country="Malaysia" x="72" y="20" width="8" height="8"/>
+                    <rect class="country" data-country="Singapore" x="76" y="26" width="2" height="2"/>
+                    <rect class="country" data-country="Indonesia" x="80" y="24" width="20" height="10"/>
+                    <rect class="country" data-country="Philippines" x="86" y="10" width="8" height="10"/>
+
+                    <!-- Océanie -->
+                    <rect class="country" data-country="Australia" x="100" y="30" width="30" height="18"/>
+                    <rect class="country" data-country="New Zealand" x="130" y="40" width="8" height="12"/>
+                </svg>
+            </div>
         </div>
     </div>
-    <div id="map"></div>
-</div>
 
-<div id="result">
-    <h1 id="score"></h1>
-    <p>Vous pouvez montrer votre score aux autres membres du serveur</p>
-    <button id="restart" onclick="goHome()">Retour à l'accueil</button>
+    <div id="result">
+        <h1 id="score"></h1>
+        <p>Vous pouvez montrer votre score aux autres membres du serveur</p>
+        <button id="restart" onclick="goHome()">Retour à l'accueil</button>
+    </div>
+
 </div>
 
 <script>
+/* ---------------------------
+   LISTE DES PAYS + CAPITALES
+   (beaucoup de pays, 3 niveaux)
+----------------------------*/
+const COUNTRIES = [
+    // Facile (pays très connus)
+    { name: "France", capital: "Paris", difficulty: "easy" },
+    { name: "Spain", capital: "Madrid", difficulty: "easy" },
+    { name: "Portugal", capital: "Lisbon", difficulty: "easy" },
+    { name: "United Kingdom", capital: "London", difficulty: "easy" },
+    { name: "Ireland", capital: "Dublin", difficulty: "easy" },
+    { name: "Germany", capital: "Berlin", difficulty: "easy" },
+    { name: "Italy", capital: "Rome", difficulty: "easy" },
+    { name: "Belgium", capital: "Brussels", difficulty: "easy" },
+    { name: "Netherlands", capital: "Amsterdam", difficulty: "easy" },
+    { name: "Switzerland", capital: "Bern", difficulty: "easy" },
+    { name: "Austria", capital: "Vienna", difficulty: "easy" },
+    { name: "Poland", capital: "Warsaw", difficulty: "easy" },
+    { name: "Norway", capital: "Oslo", difficulty: "easy" },
+    { name: "Sweden", capital: "Stockholm", difficulty: "easy" },
+    { name: "Finland", capital: "Helsinki", difficulty: "easy" },
+    { name: "Greece", capital: "Athens", difficulty: "easy" },
+    { name: "Russia", capital: "Moscow", difficulty: "easy" },
+    { name: "United States", capital: "Washington, D.C.", difficulty: "easy" },
+    { name: "Canada", capital: "Ottawa", difficulty: "easy" },
+    { name: "Mexico", capital: "Mexico City", difficulty: "easy" },
+    { name: "Brazil", capital: "Brasília", difficulty: "easy" },
+    { name: "Argentina", capital: "Buenos Aires", difficulty: "easy" },
+    { name: "Chile", capital: "Santiago", difficulty: "easy" },
+    { name: "Australia", capital: "Canberra", difficulty: "easy" },
+    { name: "Japan", capital: "Tokyo", difficulty: "easy" },
+    { name: "China", capital: "Beijing", difficulty: "easy" },
+    { name: "India", capital: "New Delhi", difficulty: "easy" },
+    { name: "South Africa", capital: "Pretoria", difficulty: "easy" },
 
-// ---------------------------
-// 1) GEOJSON MONDIAL (COLLER BLOC 2 ICI)
-// ---------------------------
+    // Moyen
+    { name: "Morocco", capital: "Rabat", difficulty: "medium" },
+    { name: "Algeria", capital: "Algiers", difficulty: "medium" },
+    { name: "Tunisia", capital: "Tunis", difficulty: "medium" },
+    { name: "Libya", capital: "Tripoli", difficulty: "medium" },
+    { name: "Egypt", capital: "Cairo", difficulty: "medium" },
+    { name: "Nigeria", capital: "Abuja", difficulty: "medium" },
+    { name: "Kenya", capital: "Nairobi", difficulty: "medium" },
+    { name: "Ethiopia", capital: "Addis Ababa", difficulty: "medium" },
+    { name: "Tanzania", capital: "Dodoma", difficulty: "medium" },
+    { name: "Turkey", capital: "Ankara", difficulty: "medium" },
+    { name: "Saudi Arabia", capital: "Riyadh", difficulty: "medium" },
+    { name: "Iran", capital: "Tehran", difficulty: "medium" },
+    { name: "Iraq", capital: "Baghdad", difficulty: "medium" },
+    { name: "Syria", capital: "Damascus", difficulty: "medium" },
+    { name: "Israel", capital: "Jerusalem", difficulty: "medium" },
+    { name: "Pakistan", capital: "Islamabad", difficulty: "medium" },
+    { name: "Afghanistan", capital: "Kabul", difficulty: "medium" },
+    { name: "Bangladesh", capital: "Dhaka", difficulty: "medium" },
+    { name: "Sri Lanka", capital: "Sri Jayawardenepura Kotte", difficulty: "medium" },
+    { name: "Thailand", capital: "Bangkok", difficulty: "medium" },
+    { name: "Vietnam", capital: "Hanoi", difficulty: "medium" },
+    { name: "Cambodia", capital: "Phnom Penh", difficulty: "medium" },
+    { name: "Laos", capital: "Vientiane", difficulty: "medium" },
+    { name: "Myanmar", capital: "Naypyidaw", difficulty: "medium" },
+    { name: "Malaysia", capital: "Kuala Lumpur", difficulty: "medium" },
+    { name: "Singapore", capital: "Singapore", difficulty: "medium" },
+    { name: "Indonesia", capital: "Jakarta", difficulty: "medium" },
+    { name: "Philippines", capital: "Manila", difficulty: "medium" },
+    { name: "New Zealand", capital: "Wellington", difficulty: "medium" },
+    { name: "Ukraine", capital: "Kyiv", difficulty: "medium" },
+    { name: "Czech Republic", capital: "Prague", difficulty: "medium" },
+    { name: "Hungary", capital: "Budapest", difficulty: "medium" },
 
-const WORLD = null; // remplacé par BLOC 2
+    // Difficile
+    { name: "Mongolia", capital: "Ulaanbaatar", difficulty: "hard" },
+    { name: "North Korea", capital: "Pyongyang", difficulty: "hard" },
+    { name: "South Korea", capital: "Seoul", difficulty: "hard" },
+    { name: "Colombia", capital: "Bogotá", difficulty: "hard" },
+    { name: "Peru", capital: "Lima", difficulty: "hard" },
+    { name: "Venezuela", capital: "Caracas", difficulty: "hard" },
+    { name: "Ethiopia", capital: "Addis Ababa", difficulty: "hard" }, // déjà mais ok
+    { name: "Tanzania", capital: "Dodoma", difficulty: "hard" }      // idem
+];
 
-// ---------------------------
-// 2) LISTE DES CAPITALES (COLLER BLOC 3 ICI)
-// ---------------------------
-
-const CAPITALS = null; // remplacé par BLOC 3
-
-// ---------------------------
-// VARIABLES DU JEU
-// ---------------------------
-
-let map;
-let geojsonLayer;
-let countries = [];
-let questions = [];
-let index = 0;
+/* ---------------------------
+   VARIABLES DU JEU
+----------------------------*/
+let currentQuestions = [];
+let currentIndex = 0;
 let score = 0;
 let totalQuestions = 20;
+let currentDifficulty = "easy";
 
-// ---------------------------
-// INITIALISATION CARTE
-// ---------------------------
-
-function initMap() {
-    map = L.map('map').setView([20, 0], 2);
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png', {
-        maxZoom: 6
-    }).addTo(map);
-
-    geojsonLayer = L.geoJSON(WORLD, {
-        style: {
-            color: "#555",
-            weight: 1,
-            fillOpacity: 0.1
-        },
-        onEachFeature: (feature, layer) => {
-            const name = feature.properties.ADMIN;
-            layer.on("click", () => onCountryClick(name));
-            countries.push(name);
-        }
-    }).addTo(map);
+/* ---------------------------
+   UTILITAIRES
+----------------------------*/
+function shuffle(arr) {
+    return arr
+        .map(v => ({ v, r: Math.random() }))
+        .sort((a, b) => a.r - b.r)
+        .map(o => o.v);
 }
 
-// ---------------------------
-// DÉMARRER LE JEU
-// ---------------------------
-
-function startGame() {
+/* ---------------------------
+   DÉMARRER LE JEU
+----------------------------*/
+function startGame(diff) {
+    currentDifficulty = diff;
     score = 0;
-    index = 0;
+    currentIndex = 0;
 
-    const valid = Object.keys(CAPITALS).filter(c => countries.includes(c));
+    let pool = COUNTRIES.filter(c => {
+        if (diff === "easy") return c.difficulty === "easy";
+        if (diff === "medium") return c.difficulty !== "hard";
+        return true;
+    });
 
-    questions = valid.sort(() => Math.random() - 0.5).slice(0, totalQuestions);
-
-    document.getElementById("home").style.display = "none";
-    document.getElementById("quiz").style.display = "flex";
+    pool = shuffle(pool);
+    totalQuestions = Math.min(20, pool.length);
+    currentQuestions = pool.slice(0, totalQuestions);
 
     document.getElementById("qtotal").textContent = totalQuestions;
+    document.getElementById("home").style.display = "none";
+    document.getElementById("result").style.display = "none";
+    document.getElementById("quiz").style.display = "flex";
 
-    if (!map) initMap();
-
+    clearHighlights();
     loadQuestion();
 }
 
-// ---------------------------
-// CHARGER QUESTION
-// ---------------------------
-
+/* ---------------------------
+   CHARGER UNE QUESTION
+----------------------------*/
 function loadQuestion() {
-    const country = questions[index];
-    document.getElementById("capital").textContent = CAPITALS[country];
-    document.getElementById("qnum").textContent = index + 1;
+    const q = currentQuestions[currentIndex];
+    if (!q) {
+        endGame();
+        return;
+    }
+    document.getElementById("capital").textContent = q.capital;
+    document.getElementById("qnum").textContent = currentIndex + 1;
     document.getElementById("qscore").textContent = score;
 }
 
-// ---------------------------
-// CLIQUE SUR UN PAYS
-// ---------------------------
+/* ---------------------------
+   GESTION DES CLICS SUR LA CARTE
+----------------------------*/
+const svg = document.querySelector("#map svg");
 
-function onCountryClick(clicked) {
-    const correct = questions[index];
+svg.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!target.classList.contains("country")) return;
+    if (!currentQuestions.length) return;
 
-    if (clicked === correct) {
+    const clickedName = target.getAttribute("data-country");
+    handleAnswer(clickedName, target);
+});
+
+function handleAnswer(clickedName, element) {
+    const q = currentQuestions[currentIndex];
+    if (!q) return;
+
+    const correctName = q.name;
+
+    if (clickedName === correctName) {
         score++;
-        highlight(clicked, "green");
+        element.classList.add("correct");
     } else {
-        highlight(clicked, "red");
-        highlight(correct, "green");
+        element.classList.add("wrong");
+        // surligne aussi le bon pays
+        const all = document.querySelectorAll(".country");
+        all.forEach(el => {
+            if (el.getAttribute("data-country") === correctName) {
+                el.classList.add("correct");
+            }
+        });
     }
 
-    index++;
-    if (index >= totalQuestions) {
-        setTimeout(endGame, 800);
+    currentIndex++;
+    if (currentIndex >= totalQuestions) {
+        setTimeout(() => {
+            endGame();
+        }, 900);
         return;
     }
 
     setTimeout(() => {
-        resetStyles();
+        clearHighlights();
         loadQuestion();
-    }, 1200);
+    }, 900);
 }
 
-// ---------------------------
-// COLORIER UN PAYS
-// ---------------------------
-
-function highlight(name, color) {
-    geojsonLayer.eachLayer(layer => {
-        if (layer.feature.properties.ADMIN === name) {
-            layer.setStyle({
-                fillColor: color,
-                fillOpacity: 0.5,
-                color: color
-            });
-        }
+function clearHighlights() {
+    document.querySelectorAll(".country").forEach(el => {
+        el.classList.remove("correct", "wrong");
     });
 }
 
-function resetStyles() {
-    geojsonLayer.eachLayer(layer => {
-        layer.setStyle({
-            color: "#555",
-            weight: 1,
-            fillOpacity: 0.1
-        });
-    });
-}
-
-// ---------------------------
-// FIN DU JEU
-// ---------------------------
-
+/* ---------------------------
+   FIN DU JEU
+----------------------------*/
 function endGame() {
     document.getElementById("quiz").style.display = "none";
     document.getElementById("result").style.display = "flex";
-
     document.getElementById("score").textContent = `Score : ${score} / ${totalQuestions}`;
 }
 
+/* ---------------------------
+   RETOUR ACCUEIL
+----------------------------*/
 function goHome() {
     document.getElementById("result").style.display = "none";
     document.getElementById("home").style.display = "flex";
+    clearHighlights();
 }
-
 </script>
-
 </body>
 </html>
