@@ -1,77 +1,148 @@
-<!-- CHAT UI -->
-<div id="chat-toggle">💬</div>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Draw Together</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }
+    canvas { display: block; background: #fff; cursor: crosshair; }
+    #ui, #chat-window, #chat-toggle {
+      position: absolute; z-index: 10; font-size: 14px;
+    }
+    #ui {
+      top: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 8px;
+    }
+    #chat-toggle {
+      bottom: 20px; right: 20px; background: #111827; color: white; padding: 12px; border-radius: 50%; cursor: pointer;
+    }
+    #chat-window {
+      bottom: 80px; right: 20px; width: 260px; height: 300px; background: white; border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: none; flex-direction: column; overflow: hidden;
+    }
+    #chat-header { background: #111827; color: white; padding: 10px; text-align: center; font-weight: bold; }
+    #chat-messages { flex: 1; padding: 10px; overflow-y: auto; }
+    #chat-input-area { display: flex; border-top: 1px solid #ccc; }
+    #chat-input { flex: 1; padding: 8px; border: none; outline: none; }
+    #chat-send { padding: 8px 12px; background: #111827; color: white; border: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
 
-<div id="chat-window">
+<div id="ui">
+  <div>
+    Pseudo : <input id="pseudo" value="Guest" />
+  </div>
+  <div>
+    Couleur : <input type="color" id="color" value="#111827" />
+  </div>
+  <div>
+    Taille : <input type="range" id="size" min="1" max="40" value="6" />
+  </div>
+</div>
+
+<div id="chat-toggle">💬</div>
+<div id="chat-window" style="display:none; flex-direction:column;">
   <div id="chat-header">Chat</div>
   <div id="chat-messages"></div>
   <div id="chat-input-area">
-    <input id="chat-input" type="text" placeholder="Écrire un message...">
+    <input id="chat-input" type="text" placeholder="Message..." />
     <button id="chat-send">Envoyer</button>
   </div>
 </div>
 
-<style>
-#chat-toggle {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  background: #111827;
-  color: white;
-  padding: 12px 14px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 1.2rem;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-  z-index: 20;
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let camX = -2000, camY = -2000;
+let drawing = false, panning = false;
+let lastX = 0, lastY = 0;
+let pseudo = document.getElementById("pseudo").value;
+let color = document.getElementById("color").value;
+let size = parseInt(document.getElementById("size").value, 10);
+
+const ws = new WebSocket("wss://mini-jeux-hj5v.onrender.com");
+
+ws.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  if (msg.type === "draw") {
+    drawLine(msg.x1, msg.y1, msg.x2, msg.y2, msg.color, msg.size);
+  }
+  if (msg.type === "chat") {
+    const div = document.createElement("div");
+    div.innerHTML = `<strong>${msg.pseudo} :</strong> ${msg.message}`;
+    document.getElementById("chat-messages").appendChild(div);
+    document.getElementById("chat-messages").scrollTop = 99999;
+  }
+};
+
+function drawLine(x1, y1, x2, y2, color, size) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(x1 + camX, y1 + camY);
+  ctx.lineTo(x2 + camX, y2 + camY);
+  ctx.stroke();
 }
 
-#chat-window {
-  position: absolute;
-  bottom: 80px;
-  right: 20px;
-  width: 260px;
-  height: 320px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-  display: none;
-  flex-direction: column;
-  overflow: hidden;
-  z-index: 20;
-}
+canvas.addEventListener("mousedown", (e) => {
+  if (e.button === 2 || e.shiftKey) {
+    panning = true;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    camStartX = camX;
+    camStartY = camY;
+    return;
+  }
+  drawing = true;
+  const w = { x: e.clientX - camX, y: e.clientY - camY };
+  lastX = w.x;
+  lastY = w.y;
+});
 
-#chat-header {
-  background: #111827;
-  color: white;
-  padding: 10px;
-  font-weight: 600;
-  text-align: center;
-}
+canvas.addEventListener("mousemove", (e) => {
+  if (panning) {
+    camX = camStartX + (e.clientX - panStartX);
+    camY = camStartY + (e.clientY - panStartY);
+    return;
+  }
+  if (!drawing) return;
+  const w = { x: e.clientX - camX, y: e.clientY - camY };
+  drawLine(lastX, lastY, w.x, w.y, color, size);
+  ws.send(JSON.stringify({ type: "draw", x1: lastX, y1: lastY, x2: w.x, y2: w.y, color, size }));
+  lastX = w.x;
+  lastY = w.y;
+});
 
-#chat-messages {
-  flex: 1;
-  padding: 10px;
-  overflow-y: auto;
-  font-size: 0.9rem;
-}
+canvas.addEventListener("mouseup", () => { drawing = false; panning = false; });
+canvas.addEventListener("mouseleave", () => { drawing = false; panning = false; });
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
-#chat-input-area {
-  display: flex;
-  border-top: 1px solid #e5e7eb;
-}
+document.getElementById("color").addEventListener("input", (e) => { color = e.target.value; });
+document.getElementById("size").addEventListener("input", (e) => { size = parseInt(e.target.value, 10); });
+document.getElementById("pseudo").addEventListener("input", (e) => { pseudo = e.target.value.trim() || "Guest"; });
 
-#chat-input {
-  flex: 1;
-  padding: 8px;
-  border: none;
-  outline: none;
-}
+document.getElementById("chat-toggle").addEventListener("click", () => {
+  const win = document.getElementById("chat-window");
+  win.style.display = win.style.display === "none" ? "flex" : "none";
+});
 
-#chat-send {
-  padding: 8px 12px;
-  background: #111827;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-</style>
+document.getElementById("chat-send").addEventListener("click", () => {
+  const input = document.getElementById("chat-input");
+  const text = input.value.trim();
+  if (!text) return;
+  ws.send(JSON.stringify({ type: "chat", pseudo, message: text }));
+  input.value = "";
+});
+
+document.getElementById("chat-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("chat-send").click();
+});
+</script>
+</body>
+</html>
